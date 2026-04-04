@@ -56,6 +56,8 @@ extern void isr21(void);
 extern void irq0(void);
 extern void irq1(void);
 
+extern void scheduler_tick(registers_t* regs);
+
 void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
     idt[num].offset_low  = base & 0xFFFF;
     idt[num].offset_mid  = (base >> 16) & 0xFFFF;
@@ -119,8 +121,8 @@ void isr_handler(registers_t* regs) {
 // Called from isr.asm for IRQs
 void irq_handler(registers_t* regs) {
     if (regs->int_no == 32) {
-        // IRQ0 — timer
         timer_ticks++;
+        scheduler_tick(regs);
     }
 
     if (regs->int_no == 33) {
