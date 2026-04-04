@@ -5,7 +5,7 @@
 
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
-#define VGA_ADDR   ((uint16_t*)0xB8000)
+#define VGA_ADDR   ((volatile uint16_t*)0xB8000)
 
 typedef enum {
     VGA_BLACK         = 0,

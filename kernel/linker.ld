@@ -1,7 +1,7 @@
 ENTRY(kernel_main)
 
 SECTIONS {
-    . = 0x8000;
+    . = 0x70000;
 
     .text : {
         KEEP(*(.text.kernel_main))
@@ -17,8 +17,10 @@ SECTIONS {
     }
 
     .bss : {
+        __bss_start = .;
         *(COMMON)
         *(.bss*)
+        __bss_end = .;
     }
 
     /DISCARD/ : {

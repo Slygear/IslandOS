@@ -30,10 +30,10 @@ boot/island.img: boot/stage1.bin boot/stage2.bin kernel/kernel.bin
 	dd if=/dev/zero of=boot/island.img bs=512 count=2880
 	dd if=boot/stage1.bin of=boot/island.img bs=512 seek=0 conv=notrunc
 	dd if=boot/stage2.bin of=boot/island.img bs=512 seek=1 conv=notrunc
-	dd if=kernel/kernel.bin of=boot/island.img bs=512 seek=17 conv=notrunc
+	dd if=kernel/kernel.bin of=boot/island.img bs=512 seek=3 conv=notrunc
 
 run: boot/island.img
-	qemu-system-x86_64 -drive format=raw,file=boot/island.img
+	qemu-system-x86_64 -drive format=raw,file=boot/island.img,if=ide,index=0,media=disk
 
 clean:
 	rm -f boot/stage1.bin boot/stage2.bin boot/island.img \

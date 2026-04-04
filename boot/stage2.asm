@@ -2,12 +2,15 @@
 [ORG 0x7E00]
 
 stage2_start:
+    mov [boot_drive], dl
+
     xor ax, ax
     mov ds, ax
     mov es, ax
     mov ss, ax
+    mov sp, 0x7C00
 
-    ; Print "S2" to confirm stage2 is running
+    ; Print "S2:OK"
     mov ah, 0x0E
     mov al, 'S'
     int 0x10
@@ -15,19 +18,6 @@ stage2_start:
     int 0x10
     mov al, ':'
     int 0x10
-
-    ; Load kernel at 0x8000
-    mov ah, 0x02
-    mov al, 16
-    mov ch, 0
-    mov cl, 18
-    mov dh, 0
-    mov bx, 0x8000
-    int 0x13
-    jc disk_error
-
-    ; Print "OK" to confirm kernel loaded
-    mov ah, 0x0E
     mov al, 'O'
     int 0x10
     mov al, 'K'
@@ -50,20 +40,6 @@ stage2_start:
 
     jmp 0x08:protected_mode
 
-disk_error:
-    mov si, err_msg
-.loop:
-    lodsb
-    or al, al
-    jz halt
-    mov ah, 0x0E
-    int 0x10
-    jmp .loop
-
-halt:
-    cli
-    hlt
-
 [BITS 32]
 protected_mode:
     mov ax, 0x10
@@ -73,6 +49,12 @@ protected_mode:
     mov gs, ax
     mov ss, ax
     mov esp, 0x90000
+
+    ; Zero out BSS region
+    mov edi, 0x78000
+    mov ecx, 0x2000
+    xor eax, eax
+    rep stosd
 
     ; Set up paging for long mode
     mov edi, 0x1000
@@ -91,10 +73,14 @@ protected_mode:
     mov dword [edi],        0x3003
     mov dword [edi + 4],    0x0
 
-    ; PDT[0] -> 2MB page (identity map)
+    ; PDT[0] -> 2MB page at 0x0 (identity map first 2MB)
     add edi, 0x1000
     mov dword [edi],        0x0083
     mov dword [edi + 4],    0x0
+
+    ; PDT[1] -> 2MB page at 0x200000 (identity map 2MB-4MB)
+    mov dword [edi + 8],    0x200083
+    mov dword [edi + 12],   0x0
 
     ; Enable PAE
     mov eax, cr4
@@ -126,8 +112,7 @@ long_mode:
     mov ss, ax
     mov rsp, 0x90000
 
-    ; Jump to kernel using absolute address
-    mov rax, 0x8000
+    mov rax, 0x70000
     call rax
 
 halt64:
@@ -160,4 +145,4 @@ gdt64_descriptor:
     dw gdt64_end - gdt64_start - 1
     dd gdt64_start
 
-err_msg db "Kernel load error!", 0x0D, 0x0A, 0
+boot_drive db 0

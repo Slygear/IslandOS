@@ -1,6 +1,9 @@
 #include "vga.h"
 #include "pmm.h"
-#include "vmm.h"
+#include "heap.h"
+
+extern uint64_t __bss_start;
+extern uint64_t __bss_end;
 
 static void print_num(uint64_t n) {
     char buf[21];
@@ -29,6 +32,10 @@ static void print_hex(uint64_t n) {
 }
 
 void kernel_main(void) {
+    uint64_t* bss = &__bss_start;
+    while (bss < &__bss_end)
+        *bss++ = 0;
+
     vga_init();
 
     vga_set_color(VGA_LIGHT_CYAN, VGA_BLACK);
@@ -40,17 +47,21 @@ void kernel_main(void) {
     vga_println("Long mode:   OK");
     vga_println("Kernel:      OK");
 
-    // PMM
-    pmm_init(0x100000, 32 * 1024 * 1024);
+    pmm_init(0x200000, 32 * 1024 * 1024);
     vga_set_color(VGA_LIGHT_BROWN, VGA_BLACK);
     vga_print("PMM:         OK — free pages: ");
     print_num(pmm_free_pages());
     vga_println("");
 
-    // VMM
-    vmm_init();
-    vga_print("VMM:         OK — mapped: ");
-    print_hex(vmm_get_phys(0x8000));
+    void* heap_mem = pmm_alloc();
+    heap_init(heap_mem, PAGE_SIZE);
+    uint32_t* a = (uint32_t*)kmalloc(4);
+    uint32_t* b = (uint32_t*)kmalloc(4);
+    a[0] = 0xDEAD;
+    b[0] = 0xBEEF;
+    kfree(a);
+    vga_print("Heap:        OK — b[0]=");
+    print_hex(b[0]);
     vga_println("");
 
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
