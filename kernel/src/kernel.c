@@ -4,6 +4,8 @@
 #include "idt.h"
 #include "process.h"
 #include "scheduler.h"
+#include "vfs.h"
+#include "ramfs.h"
 
 extern uint64_t __bss_start;
 extern uint64_t __bss_end;
@@ -40,29 +42,6 @@ static void pit_init(uint32_t freq) {
     __asm__("outb %0, %1" :: "a"((uint8_t)((divisor >> 8) & 0xFF)), "Nd"((uint16_t)0x40));
 }
 
-static volatile int proc_a_count = 0;
-static volatile int proc_b_count = 0;
-
-static void proc_a(void) {
-    while (1) {
-        proc_a_count++;
-        if (proc_a_count % 5000000 == 0) {
-            vga_set_color(VGA_LIGHT_CYAN, VGA_BLACK);
-            vga_print("[A]");
-        }
-    }
-}
-
-static void proc_b(void) {
-    while (1) {
-        proc_b_count++;
-        if (proc_b_count % 5000000 == 0) {
-            vga_set_color(VGA_LIGHT_MAGENTA, VGA_BLACK);
-            vga_print("[B]");
-        }
-    }
-}
-
 void kernel_main(void) {
     uint64_t* bss = &__bss_start;
     while (bss < &__bss_end)
@@ -96,21 +75,33 @@ void kernel_main(void) {
     vga_println("IDT:         OK");
     vga_println("PIT:         OK");
 
-    process_init();
-    scheduler_init();
+    // VFS
+    vfs_init();
+    ramfs_init(vfs_root());
 
-    process_t* pa = process_create("proc_a", proc_a);
-    process_t* pb = process_create("proc_b", proc_b);
-    scheduler_add(pa);
-    scheduler_add(pb);
+    // Create directory structure
+    vfs_mkdir("/bin");
+    vfs_mkdir("/etc");
+    vfs_mkdir("/home");
 
-    vga_println("Scheduler:   OK");
+    // Create and write a file
+    vfs_node_t* f = vfs_mkfile("/etc/island.conf");
+    uint8_t msg[] = "The Island is alive.";
+    vfs_write(f, msg, sizeof(msg) - 1, 0);
+
+    // Read it back
+    uint8_t buf[64] = {0};
+    vfs_read(f, buf, sizeof(buf), 0);
+
+    vga_print("VFS:         OK — /etc/island.conf: ");
+    vga_println((char*)buf);
 
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_println("Welcome, John.");
     vga_println("The Island is alive.");
     vga_println("");
     vga_set_color(VGA_WHITE, VGA_BLACK);
+    vga_print("> ");
 
     for (;;) __asm__("hlt");
 }

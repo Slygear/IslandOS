@@ -73,14 +73,16 @@ protected_mode:
     mov dword [edi],        0x3003
     mov dword [edi + 4],    0x0
 
-    ; PDT[0] -> 2MB page at 0x0 (identity map first 2MB)
+    ; Identity map first 8MB (4 x 2MB pages)
     add edi, 0x1000
     mov dword [edi],        0x0083
     mov dword [edi + 4],    0x0
-
-    ; PDT[1] -> 2MB page at 0x200000 (identity map 2MB-4MB)
     mov dword [edi + 8],    0x200083
     mov dword [edi + 12],   0x0
+    mov dword [edi + 16],   0x400083
+    mov dword [edi + 20],   0x0
+    mov dword [edi + 24],   0x600083
+    mov dword [edi + 28],   0x0
 
     ; Enable PAE
     mov eax, cr4
