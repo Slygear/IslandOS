@@ -25,6 +25,8 @@ typedef struct {
     uint64_t rip, cs, rflags, rsp, ss;
 } registers_t;
 
+uint64_t timer_get_ticks(void);
+
 void idt_init(void);
 void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags);
 

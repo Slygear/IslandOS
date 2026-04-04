@@ -4,6 +4,8 @@
 static idt_entry_t idt[256];
 static idt_ptr_t   idt_ptr;
 
+static uint64_t timer_ticks = 0;
+
 // Exception names
 static const char* exception_names[] = {
     "Division By Zero",
@@ -64,6 +66,10 @@ void idt_set_gate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
     idt[num].zero        = 0;
 }
 
+uint64_t timer_get_ticks(void) {
+    return timer_ticks;
+}
+
 void idt_init(void) {
     idt_ptr.limit = sizeof(idt) - 1;
     idt_ptr.base  = (uint64_t)&idt;
@@ -112,12 +118,16 @@ void isr_handler(registers_t* regs) {
 
 // Called from isr.asm for IRQs
 void irq_handler(registers_t* regs) {
+    if (regs->int_no == 32) {
+        // IRQ0 — timer
+        timer_ticks++;
+    }
+
     if (regs->int_no == 33) {
         // IRQ1 — keyboard
         uint8_t scancode;
         __asm__("inb %1, %0" : "=a"(scancode) : "Nd"((uint16_t)0x60));
-        
-        // Simple scancode to ASCII (US layout, no shift)
+
         static const char scancode_map[] = {
             0, 0, '1','2','3','4','5','6','7','8','9','0','-','=',
             '\b', '\t',

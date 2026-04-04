@@ -18,22 +18,7 @@ static void print_num(uint64_t n) {
     vga_print(&buf[i]);
 }
 
-static void print_hex(uint64_t n) {
-    char buf[17];
-    int i = 16;
-    buf[i] = 0;
-    if (n == 0) { vga_print("0x0"); return; }
-    while (n > 0) {
-        int d = n % 16;
-        buf[--i] = d < 10 ? '0' + d : 'A' + d - 10;
-        n /= 16;
-    }
-    vga_print("0x");
-    vga_print(&buf[i]);
-}
-
 static void pic_remap(void) {
-    // Remap PIC IRQs to 0x20-0x2F
     __asm__("outb %0, %1" :: "a"((uint8_t)0x11), "Nd"((uint16_t)0x20));
     __asm__("outb %0, %1" :: "a"((uint8_t)0x11), "Nd"((uint16_t)0xA0));
     __asm__("outb %0, %1" :: "a"((uint8_t)0x20), "Nd"((uint16_t)0x21));
@@ -42,9 +27,15 @@ static void pic_remap(void) {
     __asm__("outb %0, %1" :: "a"((uint8_t)0x02), "Nd"((uint16_t)0xA1));
     __asm__("outb %0, %1" :: "a"((uint8_t)0x01), "Nd"((uint16_t)0x21));
     __asm__("outb %0, %1" :: "a"((uint8_t)0x01), "Nd"((uint16_t)0xA1));
-    // Unmask all IRQs
     __asm__("outb %0, %1" :: "a"((uint8_t)0x00), "Nd"((uint16_t)0x21));
     __asm__("outb %0, %1" :: "a"((uint8_t)0x00), "Nd"((uint16_t)0xA1));
+}
+
+static void pit_init(uint32_t freq) {
+    uint32_t divisor = 1193180 / freq;
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x36),                    "Nd"((uint16_t)0x43));
+    __asm__("outb %0, %1" :: "a"((uint8_t)(divisor & 0xFF)),         "Nd"((uint16_t)0x40));
+    __asm__("outb %0, %1" :: "a"((uint8_t)((divisor >> 8) & 0xFF)), "Nd"((uint16_t)0x40));
 }
 
 void kernel_main(void) {
@@ -75,8 +66,10 @@ void kernel_main(void) {
 
     pic_remap();
     idt_init();
+    pit_init(100);
     __asm__("sti");
     vga_println("IDT:         OK");
+    vga_println("PIT:         OK");
 
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_println("Welcome, John.");
