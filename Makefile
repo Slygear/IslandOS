@@ -9,7 +9,7 @@ LD      = ld
 LDFLAGS = -nostdlib -T kernel/linker.ld -z max-page-size=0x1000
 
 SRCS    = $(wildcard kernel/src/*.c)
-OBJS    = $(SRCS:.c=.o)
+OBJS    = $(SRCS:.c=.o) kernel/src/isr.o
 
 all: boot/island.img
 
@@ -21,6 +21,9 @@ boot/stage2.bin: boot/stage2.asm
 
 kernel/src/%.o: kernel/src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+kernel/src/isr.o: kernel/src/isr.asm
+	nasm -f elf64 kernel/src/isr.asm -o kernel/src/isr.o
 
 kernel/kernel.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^

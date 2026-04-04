@@ -1,6 +1,7 @@
 #include "vga.h"
 #include "pmm.h"
 #include "heap.h"
+#include "idt.h"
 
 extern uint64_t __bss_start;
 extern uint64_t __bss_end;
@@ -31,6 +32,21 @@ static void print_hex(uint64_t n) {
     vga_print(&buf[i]);
 }
 
+static void pic_remap(void) {
+    // Remap PIC IRQs to 0x20-0x2F
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x11), "Nd"((uint16_t)0x20));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x11), "Nd"((uint16_t)0xA0));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x20), "Nd"((uint16_t)0x21));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x28), "Nd"((uint16_t)0xA1));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x04), "Nd"((uint16_t)0x21));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x02), "Nd"((uint16_t)0xA1));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x01), "Nd"((uint16_t)0x21));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x01), "Nd"((uint16_t)0xA1));
+    // Unmask all IRQs
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x00), "Nd"((uint16_t)0x21));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x00), "Nd"((uint16_t)0xA1));
+}
+
 void kernel_main(void) {
     uint64_t* bss = &__bss_start;
     while (bss < &__bss_end)
@@ -55,18 +71,19 @@ void kernel_main(void) {
 
     void* heap_mem = pmm_alloc();
     heap_init(heap_mem, PAGE_SIZE);
-    uint32_t* a = (uint32_t*)kmalloc(4);
-    uint32_t* b = (uint32_t*)kmalloc(4);
-    a[0] = 0xDEAD;
-    b[0] = 0xBEEF;
-    kfree(a);
-    vga_print("Heap:        OK — b[0]=");
-    print_hex(b[0]);
-    vga_println("");
+    vga_println("Heap:        OK");
+
+    pic_remap();
+    idt_init();
+    __asm__("sti");
+    vga_println("IDT:         OK");
 
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
-    vga_println("\nWelcome, John.");
+    vga_println("Welcome, John.");
     vga_println("The Island is alive.");
+    vga_println("");
+    vga_set_color(VGA_WHITE, VGA_BLACK);
+    vga_print("> ");
 
     for (;;) __asm__("hlt");
 }

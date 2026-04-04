@@ -7,7 +7,7 @@ typedef struct {
     uint8_t color;
 } vga_state_t;
 
-static vga_state_t* const state = (vga_state_t*)0x500;
+static vga_state_t* const state = (vga_state_t*)0x5000;
 
 static uint16_t vga_entry(char c, uint8_t color) {
     return (uint16_t)c | ((uint16_t)color << 8);
@@ -18,8 +18,13 @@ void vga_init(void) {
     state->cursor_y = 0;
     state->color    = (VGA_BLACK << 4) | VGA_WHITE;
 
+    // Hide hardware cursor
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x0A), "Nd"((uint16_t)0x3D4));
+    __asm__("outb %0, %1" :: "a"((uint8_t)0x20), "Nd"((uint16_t)0x3D5));
+
+    // Clear entire VGA buffer
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-        VGA_ADDR[i] = vga_entry(' ', state->color);
+        VGA_ADDR[i] = (uint16_t)' ' | ((uint16_t)state->color << 8);
 }
 
 void vga_clear(void) {
