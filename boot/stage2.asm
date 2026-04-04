@@ -7,18 +7,32 @@ stage2_start:
     mov es, ax
     mov ss, ax
 
-    ; Load kernel at 0x8000 BEFORE switching modes
-    ; BIOS int 0x13 only works in real mode
+    ; Print "S2" to confirm stage2 is running
+    mov ah, 0x0E
+    mov al, 'S'
+    int 0x10
+    mov al, '2'
+    int 0x10
+    mov al, ':'
+    int 0x10
+
+    ; Load kernel at 0x8000
     mov ah, 0x02
-    mov al, 16          ; Read 16 sectors
-    mov ch, 0           ; Cylinder 0
-    mov cl, 10          ; Start at sector 10
-    mov dh, 0           ; Head 0
-    mov bx, 0x8000      ; Load kernel at 0x8000
+    mov al, 16
+    mov ch, 0
+    mov cl, 18
+    mov dh, 0
+    mov bx, 0x8000
     int 0x13
     jc disk_error
 
-    ; Kernel loaded, now switch modes
+    ; Print "OK" to confirm kernel loaded
+    mov ah, 0x0E
+    mov al, 'O'
+    int 0x10
+    mov al, 'K'
+    int 0x10
+
     cli
 
     ; Enable A20
@@ -112,7 +126,9 @@ long_mode:
     mov ss, ax
     mov rsp, 0x90000
 
-    call 0x8000
+    ; Jump to kernel using absolute address
+    mov rax, 0x8000
+    call rax
 
 halt64:
     cli
