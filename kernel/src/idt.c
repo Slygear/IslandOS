@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "vga.h"
+#include "shell.h"
 
 static idt_entry_t idt[256];
 static idt_ptr_t   idt_ptr;
@@ -115,6 +116,31 @@ void isr_handler(registers_t* regs) {
         vga_println(exception_names[regs->int_no]);
     else
         vga_println("Unknown");
+
+    vga_print("RIP: 0x");
+    // Print RIP in hex
+    uint64_t rip = regs->rip;
+    char hex[17];
+    int i = 16;
+    hex[i] = 0;
+    while (i > 0) {
+        int d = rip & 0xF;
+        hex[--i] = d < 10 ? '0' + d : 'A' + d - 10;
+        rip >>= 4;
+    }
+    vga_println(hex);
+
+    vga_print("ERR: 0x");
+    uint64_t err = regs->error_code;
+    i = 16;
+    hex[i] = 0;
+    while (i > 0) {
+        int d = err & 0xF;
+        hex[--i] = d < 10 ? '0' + d : 'A' + d - 10;
+        err >>= 4;
+    }
+    vga_println(hex);
+
     for (;;) __asm__("hlt");
 }
 

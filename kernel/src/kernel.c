@@ -7,6 +7,7 @@
 #include "vfs.h"
 #include "ramfs.h"
 #include "shell.h"
+#include "ata.h"
 
 extern uint64_t __bss_start;
 extern uint64_t __bss_end;
@@ -49,6 +50,18 @@ void kernel_main(void) {
         *bss++ = 0;
 
     vga_init();
+
+    uint64_t rsp;
+    __asm__ volatile("mov %%rsp, %0" : "=r"(rsp));
+    vga_print("RSP: 0x");
+    char hx[17]; int hi = 16; hx[hi] = 0;
+    uint64_t tmp = rsp;
+    while (hi > 0) {
+        int d = tmp & 0xF;
+        hx[--hi] = d < 10 ? '0'+d : 'A'+d-10;
+        tmp >>= 4;
+    }
+    vga_println(hx);
 
     vga_set_color(VGA_LIGHT_CYAN, VGA_BLACK);
     vga_println("IslandOS v0.1");
@@ -102,6 +115,29 @@ void kernel_main(void) {
     vga_println("The Island is alive.");
     vga_println("");
     vga_set_color(VGA_WHITE, VGA_BLACK);
+
+    // Set IOPL=3 to allow I/O port access
+    __asm__ volatile(
+        "pushfq\n"
+        "pop %%rax\n"
+        "or $0x3000, %%rax\n"
+        "push %%rax\n"
+        "popfq\n"
+        ::: "rax"
+    );
+
+    // ATA
+    int ata_drives = ata_init();
+    vga_set_color(VGA_LIGHT_BROWN, VGA_BLACK);
+    vga_print("ATA:         ");
+    if (ata_drives > 0) {
+        vga_print("OK — drives: ");
+        print_num(ata_drives);
+        vga_println("");
+    } else {
+        vga_println("no drives found");
+    }
+
     shell_init();
 
     for (;;) __asm__("hlt");

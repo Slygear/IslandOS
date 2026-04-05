@@ -26,8 +26,8 @@ kernel/src/isr.o: kernel/src/isr.asm
 	nasm -f elf64 kernel/src/isr.asm -o kernel/src/isr.o
 
 kernel/kernel.bin: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
-	objcopy -O binary $@ $@
+	$(LD) $(LDFLAGS) -o kernel/kernel.elf $^
+	objcopy -O binary kernel/kernel.elf $@
 
 boot/island.img: boot/stage1.bin boot/stage2.bin kernel/kernel.bin
 	dd if=/dev/zero of=boot/island.img bs=512 count=2880
@@ -36,7 +36,10 @@ boot/island.img: boot/stage1.bin boot/stage2.bin kernel/kernel.bin
 	dd if=kernel/kernel.bin of=boot/island.img bs=512 seek=3 conv=notrunc
 
 run: boot/island.img
-	qemu-system-x86_64 -drive format=raw,file=boot/island.img,if=ide,index=0,media=disk -k tr
+	qemu-system-x86_64 \
+		-drive id=disk0,format=raw,file=boot/island.img,if=none \
+		-device ide-hd,drive=disk0,bus=ide.0 \
+		-no-reboot
 
 clean:
 	rm -f boot/stage1.bin boot/stage2.bin boot/island.img \
