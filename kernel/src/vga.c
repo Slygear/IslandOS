@@ -74,3 +74,17 @@ void vga_println(const char* str) {
     vga_print(str);
     vga_putchar('\n');
 }
+
+int vga_get_x(void) { return state->cursor_x; }
+int vga_get_y(void) { return state->cursor_y; }
+
+void vga_put_at(char c, int x, int y, vga_color_t fg, vga_color_t bg) {
+    uint8_t color = (bg << 4) | fg;
+    VGA_ADDR[y * VGA_WIDTH + x] = vga_entry(c, color);
+}
+
+// vga.c
+void vga_move_back(void) {
+    if (state->cursor_x > 0)
+        state->cursor_x--;
+}

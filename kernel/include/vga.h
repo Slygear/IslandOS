@@ -33,4 +33,11 @@ void vga_putchar(char c);
 void vga_print(const char* str);
 void vga_println(const char* str);
 
+int  vga_get_x(void);
+int  vga_get_y(void);
+void vga_put_at(char c, int x, int y, vga_color_t fg, vga_color_t bg);
+
+// vga.h
+void vga_move_back(void);
+
 #endif

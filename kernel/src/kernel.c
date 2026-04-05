@@ -6,6 +6,7 @@
 #include "scheduler.h"
 #include "vfs.h"
 #include "ramfs.h"
+#include "shell.h"
 
 extern uint64_t __bss_start;
 extern uint64_t __bss_end;
@@ -101,7 +102,7 @@ void kernel_main(void) {
     vga_println("The Island is alive.");
     vga_println("");
     vga_set_color(VGA_WHITE, VGA_BLACK);
-    vga_print("> ");
+    shell_init();
 
     for (;;) __asm__("hlt");
 }

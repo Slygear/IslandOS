@@ -1,5 +1,6 @@
 #include "vfs.h"
 #include "pmm.h"
+#include "ramfs.h"
 
 static vfs_node_t nodes[VFS_MAX_NODES];
 static int        node_count = 0;
@@ -110,6 +111,9 @@ static vfs_node_t* vfs_create(const char* path, vfs_node_type_t type) {
 
     vfs_node_t* node = alloc_node();
     if (!node) return 0;
+    
+    if (type == VFS_FILE)
+        node->ops = ramfs_get_ops();
 
     strcpy_safe(node->name, name, VFS_MAX_NAME);
     node->type        = type;

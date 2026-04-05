@@ -120,29 +120,43 @@ void isr_handler(registers_t* regs) {
 
 // Called from isr.asm for IRQs
 void irq_handler(registers_t* regs) {
+    extern void shell_cursor_tick(void);
     if (regs->int_no == 32) {
         timer_ticks++;
+        shell_cursor_tick();
         scheduler_tick(regs);
     }
 
     if (regs->int_no == 33) {
-        // IRQ1 — keyboard
         uint8_t scancode;
         __asm__("inb %1, %0" : "=a"(scancode) : "Nd"((uint16_t)0x60));
 
-        static const char scancode_map[] = {
-            0, 0, '1','2','3','4','5','6','7','8','9','0','-','=',
-            '\b', '\t',
-            'q','w','e','r','t','y','u','i','o','p','[',']','\n',
+        // Ignore key release events (bit 7 set)
+        if (scancode & 0x80) goto eoi;
+
+        // Backspace
+        if (scancode == 0x0E) { shell_input('\b'); goto eoi; }
+
+        // Enter
+        if (scancode == 0x1C) { shell_input('\n'); goto eoi; }
+
+        static const char scancode_map[58] = {
+            0, 0,
+            '1','2','3','4','5','6','7','8','9','0','-','=',
+            0, 0,
+            'q','w','e','r','t','y','u','i','o','p','[',']',
+            0,
             0,
             'a','s','d','f','g','h','j','k','l',';','\'','`',
             0,'\\',
             'z','x','c','v','b','n','m',',','.','/',
-            0, '*', 0, ' '
+            0,'*',0,' '
         };
 
-        if (scancode < sizeof(scancode_map) && scancode_map[scancode])
-            vga_putchar(scancode_map[scancode]);
+        if (scancode < 58 && scancode_map[scancode])
+            shell_input(scancode_map[scancode]);
+
+        eoi:;
     }
 
     // Send EOI
